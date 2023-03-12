@@ -1,6 +1,6 @@
 MODEL:
   META_ARCHITECTURE: "PanopticFCN"
-  WEIGHTS: "/content/drive/Mydrive/R-50.pkl"
+  WEIGHTS: "/content/drive/MyDrive/R-50.pkl"
   #WEIGHTS: "/data/detectron2_modelzoo/basemodel/R-50-MSRA.pkl"
   MASK_ON: True
   PIXEL_MEAN: [123.675, 116.28, 103.53]
