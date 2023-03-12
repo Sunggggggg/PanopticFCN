@@ -9,11 +9,11 @@ from torch.nn import functional as F
 from detectron2.structures import ImageList, Instances, BitMasks
 from detectron2.modeling.meta_arch.build import META_ARCH_REGISTRY
 
-from .panopticfcn.gt_generate import GenerateGT
-from .panopticfcn.loss import sigmoid_focal_loss, weighted_dice_loss
-from .panopticfcn.head import build_position_head, build_kernel_head, build_feature_encoder, build_thing_generator, build_stuff_generator
-from .panopticfcn.backbone_utils import build_semanticfpn, build_backbone
-from .panopticfcn.utils import topk_score, multi_apply
+from projects.PanopticFCN.panopticfcn.gt_generate import GenerateGT
+from projects.PanopticFCN.panopticfcn.panopticfcn.loss import sigmoid_focal_loss, weighted_dice_loss
+from projects.PanopticFCN.panopticfcn.panopticfcn.head import build_position_head, build_kernel_head, build_feature_encoder, build_thing_generator, build_stuff_generator
+from projects.PanopticFCN.panopticfcn.panopticfcn.backbone_utils import build_semanticfpn, build_backbone
+from projects.PanopticFCN.panopticfcn.panopticfcn.utils import topk_score, multi_apply
 __all__ = ["PanopticFCN"]
 
 @META_ARCH_REGISTRY.register()
