@@ -56,16 +56,6 @@ class PanopticFCN(nn.Module):
         self.stuff_generator       = build_stuff_generator(cfg)
         self.get_ground_truth      = GenerateGT(cfg)
         
-        
-        print(self.backbone)
-        print(self.semantic_fpn)
-        print(self.position_head)
-        print(self.kernel_head)
-        print(self.feature_encoder)
-        print(self.thing_generator)
-        print(self.stuff_generator)
-        print(self.get_ground_truth)
-        
         pixel_mean = torch.Tensor(cfg.MODEL.PIXEL_MEAN).to(self.device).view(3, 1, 1)
         pixel_std = torch.Tensor(cfg.MODEL.PIXEL_STD).to(self.device).view(3, 1, 1)
         self.normalizer = lambda x: (x - pixel_mean) / pixel_std
@@ -75,7 +65,7 @@ class PanopticFCN(nn.Module):
     def forward(self, batched_inputs):
         """
         Args:
-            batched_inputs: a list, batched outputs of :class:`DatasetMapper` .
+            batched_inputs: a list, b   atched outputs of :class:`DatasetMapper` .
             Each item in the list contains the inputs for one image.
 
         For now, each item in the list is a dict that contains:
