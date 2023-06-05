@@ -37,7 +37,6 @@ class DepthPredictor():
         panoptic_seg, segments_info = predictions["panoptic_seg"]
         pred = _PanopticPrediction(panoptic_seg.to('cpu'), segments_info, self.metadata)
 
-        
         all_stuffs = list(pred.semantic_masks())
         if len(all_stuffs) == 0 : return image
         Semanticmasks, Semanticinfos = list(zip(*all_stuffs))
@@ -52,19 +51,23 @@ class DepthPredictor():
         vpx, vpy = self.findVanPoint(ground)
 
         ground_depth_map = self.ground_depth(ground, (vpx, vpy))
+
         instance_depth_map_list = self.instance_depth(Instancemasks, (vpx, vpy), ground_depth_map)
         instance_depth_map = self.FuseMask(instance_depth_map_list)
 
         stuff_depth_map_list = self.stuff_depth(nongrounds, Instancemasks, (vpx, vpy), instance_depth_map)
         stuff_depth_map = self.FuseMask(stuff_depth_map_list)
-
+        stuff_depth_map = self.Rearrage(stuff_depth_map)
         print("=" * 10)
         print("Detect Stuff : ",  len(all_stuffs))
+        print("\t Stuff list")
+        for info in Semanticinfos :
+            print(self.stuff_list[info['category_id']])
         print("Detect Things : ",  len(all_instances))
         print("Ground Candidate : ", len(grounds))
         print("=" * 10)
 
-        return ground_depth_map + instance_depth_map + stuff_depth_map
+        return ground_depth_map * ground + instance_depth_map + stuff_depth_map
     
     def ground_depth(self, ground, vp) :
         vpx, vpy = vp
@@ -84,7 +87,8 @@ class DepthPredictor():
         for mask in Instancemasks:
             mask = mask.astype(np.float32)
             mask_y, mask_x = np.nonzero(mask) # y, x
-            
+            depth_map = np.zeros((self.height, self.width), dtype = np.float32)
+
             bottom_y, bottom_x = mask_y[-1], mask_x[-1]
             depth = ground_depth_map.item(bottom_y, bottom_x)
 
@@ -94,18 +98,19 @@ class DepthPredictor():
             if bottom_y > vpy :
                 if bottom_x < vpx:
                     for x in range(start_x, end_x + 1):
-                        if x < bottom_x :
-                            mask[:, x] *= depth
-                        if x >= bottom_x :
-                            mask[:, x] *= (depth - (x - bottom_x) * resoluation)
+                        if x <= bottom_x :
+                            depth = ground_depth_map[bottom_y, bottom_x]    
+                        if x > bottom_x :
+                            depth = ground_depth_map[bottom_y, bottom_x] - np.log(x - bottom_x) * resoluation
+                        depth_map[:, x] = mask[:, x] * depth
                 elif vpx <= bottom_x:
                     for x in range(start_x, end_x + 1):
                         if x < bottom_x :
-                            mask[:, x] *= (depth - (x - bottom_x) * resoluation)
+                            depth = ground_depth_map[bottom_y, bottom_x] - np.log(bottom_x - x) * resoluation
                         if x >= bottom_x :
-                            mask[:, x] *= depth
-
-                instance_depth_map.append(mask)
+                            depth = ground_depth_map[bottom_y, bottom_x]  
+                        depth_map[:, x] = mask[:, x] * depth
+                instance_depth_map.append(depth_map)
 
         return instance_depth_map
                  
@@ -133,29 +138,50 @@ class DepthPredictor():
         criterion = nn.SmoothL1Loss()
         depth_pred_model = PolynomialModel(degree=1).to(self.device)
         optimizer = Adam(depth_pred_model.parameters(), weight_decay=0.00001)
-        for epoch in range(1000):
+        for epoch in range(200):
             running_loss = train_step(model=depth_pred_model,
                                     data=dataset,
                                     optimizer=optimizer,
                                     criterion=criterion)
         
         stuff_depth_map = list()
-        for idx, mask in enumerate(nongrounds):
+        for mask in nongrounds:
             _, labels, stats, centroids \
             = cv2.connectedComponentsWithStats(mask.astype(np.uint8))
             labels = np.array(labels, dtype = np.float32)
+
             for idx, center in enumerate(centroids) :
                 if idx == 0 : continue
                 cen_x, cen_y = center
                 dist = math.dist((cen_x, cen_y), (vpx, vpy))
+
                 dist = torch.tensor([dist])
-                pred = depth_pred_model(Variable(dist)).cpu().data.numpy()
-                labels[labels == idx] = pred[0]
-            stuff_depth_map.append(labels)
+                pred = depth_pred_model(Variable(dist)).cpu().data.numpy()[0]
+
+                Seg_mask = (labels == idx).astype(np.float32)
+                
+                mask_y, mask_x = np.nonzero(Seg_mask)
+                start_x = min(mask_x)
+                end_x = max(mask_x)
+                Seg_mask[:, start_x] *= depth
+                for x in range(start_x + 1, end_x + 1) :
+                    Seg_mask[:, x] *= depth - np.log(abs(x - start_x)) * self.dmax / vpy
+                
+                stuff_depth_map.append(Seg_mask)
 
         return stuff_depth_map
+    
+    def Rearrage(self, depth_map):
+        _max = depth_map.max()
+        _min = depth_map.min()
 
-
+        for y in range(self.height) :
+            for x in range(self.width) :
+                depth = depth_map.item(y, x)
+                depth = ((depth -_min) / (_max - _min)) * self.dmax
+                depth_map.itemset(y, x, depth)
+        return depth_map
+    
     def findVanPoint(self, imgMask) :
         vertical = np.sum(imgMask, axis = 1)
         vp_y = min(np.where(vertical != 0)[0])
