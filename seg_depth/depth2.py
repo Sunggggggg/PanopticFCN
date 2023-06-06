@@ -96,8 +96,6 @@ class DepthPredictor():
                                     data=dataset,
                                     optimizer=optimizer,
                                     criterion=criterion)
-            if epoch % 100 == 99:
-                print(f"Epoch: {epoch + 1:04}/2000 Loss: {running_loss:.5e}")
                 
         result = list()
         for i in dist_list[len(weights):] :
