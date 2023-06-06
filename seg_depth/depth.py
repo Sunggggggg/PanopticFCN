@@ -58,6 +58,7 @@ class DepthPredictor():
         stuff_depth_map_list = self.stuff_depth(nongrounds, Instancemasks, (vpx, vpy), instance_depth_map)
         stuff_depth_map = self.FuseMask(stuff_depth_map_list)
         stuff_depth_map = self.Rearrage(stuff_depth_map)
+        
         print("=" * 10)
         print("Detect Stuff : ",  len(all_stuffs))
         print("\t Stuff list")
