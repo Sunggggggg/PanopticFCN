@@ -45,6 +45,13 @@ class DepthPredictor():
         if len(all_instances) == 0 : return image
         Instancemasks, Instanceinfos = list(zip(*all_instances))
 
+        
+
+        grounds, sky, nongrounds = self.findGround_Sky(Semanticmasks, Semanticinfos)
+        if len(grounds) == 0 : return image
+        ground = self.FuseMask(grounds)
+        vpx, vpy = self.findVanPoint(ground)
+
         all_object = list()
         for mask in Instancemasks :
             all_object.append(mask)
@@ -56,12 +63,7 @@ class DepthPredictor():
             for idx, center in enumerate(centroids) :
                 if idx == 0 : continue
                 all_object.append(labels == idx)
-
-        grounds, sky, nongrounds = self.findGround_Sky(Semanticmasks, Semanticinfos)
-        if len(grounds) == 0 : return image
-        ground = self.FuseMask(grounds)
-        vpx, vpy = self.findVanPoint(ground)
-
+                
         mask_list = list()
         dist_list = list()
         for mask in all_object:
@@ -76,7 +78,7 @@ class DepthPredictor():
 
 
         ground_depth_map = self.ground_depth(ground, (vpx, vpy))
-        weights = self.depth2dist(Instancemasks, (vpx, vpy), ground_depth_map) 
+        weights = self.depth2dist(Instancemasks, (vpx, vpy), ground_depth_map, dist_list) 
     
         device = torch.device("cpu")
         dtype = torch.float
