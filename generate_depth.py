@@ -5,6 +5,7 @@ import os
 import tqdm
 import matplotlib.pyplot as plt
 import torch
+import cv2
 
 from detectron2.config import get_cfg
 from detectron2.data.detection_utils import read_image
@@ -40,6 +41,12 @@ def get_parser():
         "--WEIGHTS",
         default = "/content/drive/MyDrive/panoptic_fcn_star_r50_3x.pth",
         help="Pre-trained Model Weight",
+    )
+    parser.add_argument(
+        "--save_fig",
+        type = bool,
+        default = False,
+        help="Save Format",
     )
     parser.add_argument(
         "--confidence-threshold",
@@ -89,8 +96,11 @@ if __name__ == "__main__":
         
         depth_map = depth_generator.predict(image)
 
-        plt.figure()
-        plt.imshow(depth_map)
-        plt.axis('off')
-        plt.colorbar()
-        plt.savefig(args.output + '/depth_' + image_name)
+        if args.save_fig :
+            plt.figure()
+            plt.imshow(depth_map)
+            plt.axis('off')
+            plt.colorbar()
+            plt.savefig(args.output + '/depth_' + image_name)
+        else : 
+            cv2.imwrite(args.output + '/depth_' + image_name, depth_map)
